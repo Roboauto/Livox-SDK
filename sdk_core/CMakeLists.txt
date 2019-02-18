@@ -1,27 +1,21 @@
 cmake_minimum_required(VERSION 3.0)
 
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
+
+
 set(SDK_LIBRARY ${PROJECT_NAME}_static)
 add_library(${SDK_LIBRARY} STATIC "")
 
-if (WIN32)
-    find_path(APR_INCLUDE_DIRS apr.h)
-    find_library(APR_LIBRARIES libapr-1)
-    if (APR_LIBRARIES AND APR_INCLUDE_DIRS)
-        set(APR_FOUND "YES")
-    endif (APR_LIBRARIES AND APR_INCLUDE_DIRS)
-else (WIN32)
-    find_package(PkgConfig)
-    pkg_check_modules(APR apr-1)
-endif (WIN32)
 
-if (APR_FOUND)
-    target_include_directories(${SDK_LIBRARY}
-            PRIVATE
-            ${APR_INCLUDE_DIRS})
-    target_link_libraries(${SDK_LIBRARY}
-            PUBLIC
-            ${APR_LIBRARIES})
-endif ()
+
+
+
+target_link_libraries(${SDK_LIBRARY}
+        PUBLIC
+        CONAN_PKG::apache-apr)
+
 
 find_package(Boost 1.54 REQUIRED COMPONENTS system)
 if (Boost_FOUND AND Boost_VERSION LESS 106900)
