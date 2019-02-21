@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
-
-
 set(SDK_LIBRARY ${PROJECT_NAME}_static)
 add_library(${SDK_LIBRARY} STATIC "")
 
