@@ -13,13 +13,14 @@ target_link_libraries(${SDK_LIBRARY}
         CONAN_PKG::apache-apr)
 
 
-find_package(Boost 1.54 REQUIRED COMPONENTS system)
-if (Boost_FOUND AND Boost_VERSION LESS 106900)
-    target_link_libraries(${SDK_LIBRARY}
-            PUBLIC
-            Boost::boost
-            Boost::system)
-endif ()
+find_package(Boost REQUIRED COMPONENTS system function atomic smart_ptr thread)
+target_link_libraries(${SDK_LIBRARY}
+    PUBLIC
+    CONAN_PKG::boost_smart_ptr
+    CONAN_PKG::boost_system
+    CONAN_PKG::boost_thread
+    CONAN_PKG::boost_atomic
+    CONAN_PKG::boost_function)
 
 target_include_directories(${SDK_LIBRARY}
         PUBLIC
