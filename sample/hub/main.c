@@ -30,6 +30,8 @@
 #include <unistd.h>
 #endif
 #include <string.h>
+#include <apr_general.h>
+#include <apr_getopt.h>
 #include "livox_sdk.h"
 
 typedef enum {
@@ -46,17 +48,27 @@ typedef struct {
 
 DeviceItem devices[kMaxLidarCount];
 
-#define BROADCAST_CODE_LIST_SIZE 1
-char *broadcast_code_list[BROADCAST_CODE_LIST_SIZE] = {
-    "00000000000001"
-};
+#define BROADCAST_CODE_LIST_SIZE  1
+/** Connect all the broadcast device. */
+bool is_connect_all_broadcast_device = true;
+char broadcast_code_list[BROADCAST_CODE_LIST_SIZE][kBroadcastCodeSize];
 
-void GetLidarData(uint8_t handle, LivoxEthPacket *data, uint32_t data_num) {
+/** Connect the broadcast device in list, please input the broadcast code. */
+/*bool is_connect_all_broadcast_device = false;
+char broadcast_code_list[BROADCAST_CODE_LIST_SIZE][kBroadcastCodeSize] = {
+  "00000000000001"
+};*/
+
+void GetLidarData(uint8_t handle, LivoxEthPacket *data, uint32_t data_num, void *client_data) {
   static uint32_t receive_packet_count = 0;
   if (data) {
     ++receive_packet_count;
     if (0 == (receive_packet_count % 10000)) {
       printf("receive packet count %d %d\n", data->id, receive_packet_count);
+
+      /** Parsing the timestamp and the point cloud data. */
+      uint64_t cur_timestamp = *((uint64_t *)(data->timestamp));
+      LivoxRawPoint *p_point_data = (LivoxRawPoint *)data->data;
     }
     printf("receive packet from %d \n", (uint16_t) HubGetLidarHandle(data->slot, data->id));
   }
@@ -150,7 +162,7 @@ void OnDeviceChange(const DeviceInfo *info, DeviceEvent type) {
     printf("Device State error_code %d\n", devices[handle].info.status.status_code);
     printf("Device State working state %d\n", devices[handle].info.state);
     printf("Device feature %d\n", devices[handle].info.feature);
-    if (devices[handle].info.state == kLidarStateNormal && devices[handle].info.status.status_code == 0) {
+    if (devices[handle].info.state == kLidarStateNormal) {
       if (devices[handle].info.type == kDeviceTypeHub) {
         HubStartSampling(OnSampleCallback, NULL);
       } else {
@@ -167,39 +179,119 @@ void OnDeviceBroadcast(const BroadcastDeviceInfo *info) {
   }
 
   printf("Receive Broadcast Code %s\n", info->broadcast_code);
-  bool found = false;
 
-  int i = 0;
-  for (i = 0; i < BROADCAST_CODE_LIST_SIZE; ++i) {
-    if (strncmp(info->broadcast_code, broadcast_code_list[i], kBroadcastCodeSize) == 0) {
-      found = true;
-      break;
+  if (!is_connect_all_broadcast_device) {
+    bool found = false;
+    int i = 0;
+    for (i = 0; i < BROADCAST_CODE_LIST_SIZE; ++i) {
+      if (strncmp(info->broadcast_code, broadcast_code_list[i], kBroadcastCodeSize) == 0) {
+        found = true;
+        break;
+      }
     }
-  }
-  if (!found) {
-    return;
+    if (!found) {
+      return;
+    }
   }
 
   bool result = false;
   uint8_t handle = 0;
   result = AddHubToConnect(info->broadcast_code, &handle);
   if (result == kStatusSuccess && handle < kMaxLidarCount) {
-    SetDataCallback(handle, GetLidarData);
+    SetDataCallback(handle, GetLidarData, NULL);
     devices[handle].handle = handle;
     devices[handle].device_state = kDeviceStateDisconnect;
   }
 }
 
+/** Set the program options.
+* You can input the registered device broadcast code and decide whether to save the log file.
+*/
+int SetProgramOption(int argc, const char *argv[]) {
+  apr_status_t rv;
+  apr_pool_t *mp = NULL;
+  static const apr_getopt_option_t opt_option[] = {
+    /** Long-option, short-option, has-arg flag, description */
+    { "code", 'c', 1, "Register device broadcast code" },     
+    { "log", 'l', 0, "Save the log file" },    
+    { "help", 'h', 0, "Show help" },    
+    { NULL, 0, 0, NULL },
+  };
+  apr_getopt_t *opt = NULL;
+  int optch = 0;
+  const char *optarg = NULL;
+
+  if (apr_initialize() != APR_SUCCESS) {
+    return -1;
+  }
+
+  if (apr_pool_create(&mp, NULL) != APR_SUCCESS) {
+    return -1;
+  }
+
+  rv = apr_getopt_init(&opt, mp, argc, argv);
+  if (rv != APR_SUCCESS) {
+    printf("Program options initialization failed.\n");
+    return -1;
+  }
+
+  /** Parse the all options based on opt_option[] */
+  bool is_help = false;
+  while ((rv = apr_getopt_long(opt, opt_option, &optch, &optarg)) == APR_SUCCESS) {
+    switch (optch) {
+    case 'c':
+      printf("Register broadcast code: %s\n", optarg);
+      strncpy(broadcast_code_list[0], optarg, kBroadcastCodeSize);
+      break;
+    case 'l':
+      printf("Save the log file.\n");
+      SaveLoggerFile();
+      break;
+    case 'h':
+      printf(
+        " [-c] Register device broadcast code\n"
+        " [-l] Save the log file\n"
+        " [-h] Show help\n"
+      );
+      is_help = true;
+      break;
+    }
+  }
+  if (rv != APR_EOF) {
+    printf("Invalid options.\n");
+  }
+
+  apr_pool_destroy(mp);
+  mp = NULL;
+  apr_terminate();
+  if (is_help)
+    return 1;
+  return 0;
+}
+
 int main(int argc, const char *argv[]) {
+/** Set the program options. */
+  if (SetProgramOption(argc, argv))
+    return 0;
+
+  printf("Livox SDK initializing.\n");
+  /** Initialize Livox-SDK. */
   if (!Init()) {
     return -1;
   }
+  printf("Livox SDK has been initialized.\n");
+
+  LivoxSdkVersion _sdkversion;
+  GetLivoxSdkVersion(&_sdkversion);
+  printf("Livox SDK version %d.%d.%d .\n", _sdkversion.major, _sdkversion.minor, _sdkversion.patch);
 
   memset(devices, 0, sizeof(devices));
   SetBroadcastCallback(OnDeviceBroadcast);
   SetDeviceStateUpdateCallback(OnDeviceChange);
 
   if (Start()) {
+	printf("Start discovering device.\n");
+
 #ifdef WIN32
     Sleep(20000);
 #else
@@ -215,5 +307,4 @@ int main(int argc, const char *argv[]) {
   }
 
   Uninit();
-
 }
