@@ -13,6 +13,9 @@ if (CMAKE_CROSSCOMPILING)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
+
 add_subdirectory(sdk_core sdk_core)
 add_subdirectory(sample/hub)
 add_subdirectory(sample/lidar)

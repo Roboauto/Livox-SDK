@@ -8,51 +8,32 @@ set(LIVOX_SDK_MINOR_VERSION "1")
 set(LIVOX_SDK_PATCH_VERSION "0")
 set(LIVOX_SDK_VERSION_STRING "${LIVOX_SDK_MAJOR_VERSION}.${LIVOX_SDK_MINOR_VERSION}.${LIVOX_SDK_PATCH_VERSION}")
 
-if (WIN32)
-    set(APR_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third_party/apr/include)
-    set(APR_LIBRARIES ${PROJECT_SOURCE_DIR}/third_party/apr/lib/libapr-1.lib)
-    set(APR_FOUND "YES")
-else (WIN32)
-	if (CMAKE_CROSSCOMPILING)
-		MESSAGE(STATUS "CMAKE CROSS COMPILE")
-		execute_process(
-			COMMAND bash ${PROJECT_SOURCE_DIR}/third_party/apr/apr_cross_build.sh
-			${CMAKE_C_COMPILER}
-			RESULT_VARIABLE cmd_result
-		)
-		MESSAGE("${cmd_result}")
-		if (cmd_result)
-			MESSAGE(FATAL_ERROR "APR BUILD FAILED")
-		endif()
-		set(APR_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third_party/apr/include/apr-1)
-		set(APR_LIBRARIES ${PROJECT_SOURCE_DIR}/third_party/apr/lib/libapr-1.so)
-		set(APR_FOUND "YES")
-	else (CMAKE_CROSSCOMPILING)
-		find_package(PkgConfig)
-		pkg_check_modules(APR apr-1)
-	endif(CMAKE_CROSSCOMPILING)
-endif (WIN32)
+target_link_libraries(${SDK_LIBRARY}
+        PUBLIC
+        CONAN_PKG::apache-apr)
 
-if (APR_FOUND)
-    target_include_directories(${SDK_LIBRARY}
-            PUBLIC
-            ${APR_INCLUDE_DIRS})
-    if (APR_LIBRARY_DIRS AND NOT APPLE)
-        target_link_libraries(${SDK_LIBRARY}
+find_package(Boost REQUIRED COMPONENTS system atomic thread)
+
+        target_link_libraries(${SDK_LIBRARY} 
                 PUBLIC
-                ${APR_LIBRARY_DIRS}/libapr-1.so)
-    else ()
-        target_link_libraries(${SDK_LIBRARY}
-                PUBLIC
-                ${APR_LIBRARIES})
-    endif ()
-endif ()
+    Boost::disable_autolinking
+    Boost::system
+    Boost::thread
+    Boost::atomic
+    CONAN_PKG::spdlog
+    )
+
+if(MSVC)
+        target_link_libraries(${SDK_LIBRARY}     
+                PUBLIC      
+        mswsock.lib
+        )
+endif()
 
 target_include_directories(${SDK_LIBRARY}
         PUBLIC
         include
         include/third_party/FastCRC
-        include/third_party/spdlog
         PRIVATE
         src)
 
