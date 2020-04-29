@@ -8,25 +8,14 @@ set(LIVOX_SDK_MINOR_VERSION "1")
 set(LIVOX_SDK_PATCH_VERSION "0")
 set(LIVOX_SDK_VERSION_STRING "${LIVOX_SDK_MAJOR_VERSION}.${LIVOX_SDK_MINOR_VERSION}.${LIVOX_SDK_PATCH_VERSION}")
 
-target_link_libraries(${SDK_LIBRARY}
-        PUBLIC
-        CONAN_PKG::apache-apr)
-
-find_package(Boost REQUIRED COMPONENTS system atomic thread)
-
-        target_link_libraries(${SDK_LIBRARY} 
-                PUBLIC
-    Boost::disable_autolinking
-    Boost::system
-    Boost::thread
-    Boost::atomic
-    CONAN_PKG::spdlog
-    )
+target_link_libraries(${SDK_LIBRARY} PUBLIC
+        CONAN_PKG::apache-apr
+        CONAN_PKG::spdlog
+)
 
 if(MSVC)
-        target_link_libraries(${SDK_LIBRARY}     
-                PUBLIC      
-        mswsock.lib
+        target_link_libraries(${SDK_LIBRARY} PUBLIC      
+                mswsock.lib
         )
 endif()
 
