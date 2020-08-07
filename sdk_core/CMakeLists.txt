@@ -5,52 +5,52 @@ add_library(${SDK_LIBRARY} STATIC "")
 
 set(LIVOX_SDK_MAJOR_VERSION "2")
 set(LIVOX_SDK_MINOR_VERSION "1")
-set(LIVOX_SDK_PATCH_VERSION "0")
+set(LIVOX_SDK_PATCH_VERSION "1")
 set(LIVOX_SDK_VERSION_STRING "${LIVOX_SDK_MAJOR_VERSION}.${LIVOX_SDK_MINOR_VERSION}.${LIVOX_SDK_PATCH_VERSION}")
 
 if (WIN32)
-    set(APR_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third_party/apr/include)
-    set(APR_LIBRARIES ${PROJECT_SOURCE_DIR}/third_party/apr/lib/libapr-1.lib)
-    set(APR_FOUND "YES")
+	#    set(APR_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third_party/apr/include)
+	#    set(APR_LIBRARIES ${PROJECT_SOURCE_DIR}/third_party/apr/lib/libapr-1.lib)
+	#    set(APR_FOUND "YES")
 else (WIN32)
-	if (CMAKE_CROSSCOMPILING)
-		MESSAGE(STATUS "CMAKE CROSS COMPILE")
-		execute_process(
-			COMMAND bash ${PROJECT_SOURCE_DIR}/third_party/apr/apr_cross_build.sh
-			${CMAKE_C_COMPILER}
-			RESULT_VARIABLE cmd_result
-		)
-		MESSAGE("${cmd_result}")
-		if (cmd_result)
-			MESSAGE(FATAL_ERROR "APR BUILD FAILED")
-		endif()
-		set(APR_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third_party/apr/include/apr-1)
-		set(APR_LIBRARIES ${PROJECT_SOURCE_DIR}/third_party/apr/lib/libapr-1.so)
-		set(APR_FOUND "YES")
-	else (CMAKE_CROSSCOMPILING)
-		find_package(PkgConfig)
-		pkg_check_modules(APR apr-1)
-	endif(CMAKE_CROSSCOMPILING)
+	#	if (CMAKE_CROSSCOMPILING)
+	#		MESSAGE(STATUS "CMAKE CROSS COMPILE")
+	#		execute_process(
+	#			COMMAND bash ${PROJECT_SOURCE_DIR}/third_party/apr/apr_cross_build.sh
+	#			${CMAKE_C_COMPILER}
+	#			RESULT_VARIABLE cmd_result
+	#		)
+	#		MESSAGE("${cmd_result}")
+	#		if (cmd_result)
+	#			MESSAGE(FATAL_ERROR "APR BUILD FAILED")
+	#		endif()
+	#		set(APR_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/third_party/apr/include/apr-1)
+	#		set(APR_LIBRARIES ${PROJECT_SOURCE_DIR}/third_party/apr/lib/libapr-1.so)
+	#		set(APR_FOUND "YES")
+	#	else (CMAKE_CROSSCOMPILING)
+	#		find_package(PkgConfig)
+	#		pkg_check_modules(APR apr-1)
+	#	endif(CMAKE_CROSSCOMPILING)
 endif (WIN32)
 
-if (APR_FOUND)
-    target_include_directories(${SDK_LIBRARY}
-            PUBLIC
-            ${APR_INCLUDE_DIRS})
-    if (APR_LIBRARY_DIRS AND NOT APPLE)
-        target_link_libraries(${SDK_LIBRARY}
-                PUBLIC
-                ${APR_LIBRARY_DIRS}/libapr-1.so)
-    else ()
-        target_link_libraries(${SDK_LIBRARY}
-                PUBLIC
-                ${APR_LIBRARIES})
-    endif ()
-endif ()
+#if (APR_FOUND)
+#    target_include_directories(${SDK_LIBRARY}
+#            PUBLIC
+#            ${APR_INCLUDE_DIRS})
+#    if (APR_LIBRARY_DIRS AND NOT APPLE)
+#        target_link_libraries(${SDK_LIBRARY}
+#                PUBLIC
+#                ${APR_LIBRARY_DIRS}/libapr-1.so)
+#    else ()
+#        target_link_libraries(${SDK_LIBRARY}
+#                PUBLIC
+#                ${APR_LIBRARIES})
+#    endif ()
+#endif ()
 
-target_include_directories(${SDK_LIBRARY}
-        PUBLIC
-        include
+target_include_directories(${SDK_LIBRARY} PUBLIC
+		include
+		PRIVATE
         include/third_party/FastCRC
         include/third_party/spdlog
         PRIVATE
@@ -59,8 +59,8 @@ target_include_directories(${SDK_LIBRARY}
 set_target_properties(${SDK_LIBRARY} PROPERTIES PUBLIC_HEADER "include/livox_def.h;include/livox_sdk.h")
 
 target_compile_options(${SDK_LIBRARY}
-        PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wall -Werror -Wno-c++11-long-long>
-        PRIVATE $<$<CXX_COMPILER_ID:AppleClang>:-Wno-unknown-pragmas -Wall -Werror -Wno-c++11-long-long>
+		PRIVATE $<$<CXX_COMPILER_ID:GNU>:-fPIC>
+		PRIVATE $<$<CXX_COMPILER_ID:AppleClang>:-fPIC>
         PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-unknown-pragmas -Wall -Werror -Wno-c++11-long-long>)
 
 target_sources(${SDK_LIBRARY}
