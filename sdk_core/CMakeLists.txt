@@ -52,7 +52,6 @@ target_include_directories(${SDK_LIBRARY} PUBLIC
 		include
 		PRIVATE
         include/third_party/FastCRC
-        include/third_party/spdlog
         PRIVATE
         src)
 
