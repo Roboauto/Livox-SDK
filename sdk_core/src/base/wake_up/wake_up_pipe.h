@@ -22,31 +22,24 @@
 // SOFTWARE.
 //
 
-#include "util.h"
-#include <stdio.h>
-#include <stdlib.h>
-using std::string;
+#ifndef WAKE_UP_PIPE_H_
+#define WAKE_UP_PIPE_H_
+
 namespace livox {
+class WakeUpPipe {
+ public:
+  WakeUpPipe(): pipe_in_(0), pipe_out_(0) {}
+  virtual ~WakeUpPipe();
+  bool PipeCreate();
+  bool PipeDestroy();
+  bool WakeUp();
+  bool Drain();
+  int GetPipeOut() { return pipe_out_; }
+ protected:
+  int pipe_in_;
+  int pipe_out_;
+};
 
-string PrintAPRStatus(apr_status_t s) {
-  char buf[128];
-  apr_strerror(s, buf, sizeof(buf));
-  return buf;
-}
-string PrintAPRTime(apr_time_t t) {
-  char cbuf[45 + 1];
-  apr_size_t sz = 45;
-  apr_time_exp_t xt;
-  apr_time_exp_gmt(&xt, t);
-  int milli = t % 1000;
-  apr_strftime(cbuf, &sz, 45, " %T.", &xt);
-  string s(cbuf);
+}   // namespace livox
 
-  char buffer[33];
-  sprintf(buffer, "%d", milli);
-
-  s += buffer;
-  return s;
-}
-
-}  // namespace livox
+#endif  // WAKE_UP_PIPE_H_

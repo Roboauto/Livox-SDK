@@ -43,15 +43,12 @@ inline bool IsHub(uint8_t mode) {
 }
 
 inline bool IsLidar(uint8_t mode) {
-  return mode == kDeviceTypeLidarTele || mode == kDeviceTypeLidarMid40 || mode == kDeviceTypeLidarHorizon;
+  return mode == kDeviceTypeLidarTele || mode == kDeviceTypeLidarMid40
+        || mode == kDeviceTypeLidarHorizon || mode == kDeviceTypeLidarMid70
+        || mode == kDeviceTypeLidarAvia;
 }
 
 bool DeviceManager::Init() {
-  apr_status_t rv = apr_pool_create(&mem_pool_, NULL);
-  if (rv != APR_SUCCESS) {
-    return false;
-  }
-
   return true;
 }
 
@@ -63,11 +60,6 @@ void DeviceManager::Uninit() {
   lock_guard<mutex> lock(mutex_);
   for (DeviceContainer::iterator ite = devices_.begin(); ite != devices_.end(); ++ite) {
     ite->clear();
-  }
-
-  if (mem_pool_) {
-    apr_pool_destroy(mem_pool_);
-    mem_pool_ = NULL;
   }
 }
 
@@ -296,6 +288,24 @@ bool DeviceManager::IsLidarMid40(uint8_t handle) {
   DeviceInfo lidar_info;
   bool found = device_manager().FindDevice(handle, lidar_info);
   if ( found && lidar_info.type == kDeviceTypeLidarMid40) {
+    return true;
+  }
+  return false;
+}
+
+bool DeviceManager::IsLidarMid70(uint8_t handle) {
+  DeviceInfo lidar_info;
+  bool found = device_manager().FindDevice(handle, lidar_info);
+  if ( found && lidar_info.type == kDeviceTypeLidarMid70) {
+    return true;
+  }
+  return false;
+}
+
+bool DeviceManager::IsLidarAvia(uint8_t handle) {
+  DeviceInfo lidar_info;
+  bool found = device_manager().FindDevice(handle, lidar_info);
+  if ( found && lidar_info.type == kDeviceTypeLidarAvia) {
     return true;
   }
   return false;

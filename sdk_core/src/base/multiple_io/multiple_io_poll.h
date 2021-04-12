@@ -22,21 +22,32 @@
 // SOFTWARE.
 //
 
-#ifndef LIVOX_NETWORK_UTIL_H_
-#define LIVOX_NETWORK_UTIL_H_
-#include <apr_general.h>
-#include <apr_network_io.h>
-#ifdef WIN32
-#include <stdint.h>
-#endif
+#ifndef MULTIPLE_IO_POLL_H_
+#define MULTIPLE_IO_POLL_H_
 
+#include "multiple_io_base.h"
+#include "config.h"
+#include <memory>
+
+
+#ifdef HAVE_POLL
 
 namespace livox {
-namespace util {
 
-apr_socket_t *CreateBindSocket(uint16_t port, apr_pool_t *mem_pool, bool reuse_port = false, bool nonblock = true);
-bool FindLocalIp(const struct sockaddr_in &client_addr, uint32_t &local_ip);
+class MultipleIOPoll : public MultipleIOBase {
+ public:
+  bool PollCreate(int size);
+  bool PollSetAdd(PollFd poll_fd);
+  bool PollSetRemove(PollFd poll_fd);
+  void Poll(int timeout);
+  void PollDestroy();
+ private:
+  std::unique_ptr<struct pollfd[]> pollset_;
+  int pollset_num_ = 0;
+  int max_poll_size_ = 0;
+};
 
-}  // namespace util
 }  // namespace livox
-#endif  // LIVOX_NETWORK_UTIL_H_
+
+#endif  // HAVE_POLL
+#endif  // MULTIPLE_IO_POLL_H_

@@ -28,7 +28,7 @@
 #include <map>
 #include <list>
 #include <string>
-#include "apr_network_io.h"
+#include <algorithm>
 #include "base/io_loop.h"
 #include "comm/comm_port.h"
 
@@ -66,16 +66,19 @@ class CommandChannelDelegate {
   virtual void OnHeartbeatStateUpdate(uint8_t handle, const HeartbeatResponse &state) = 0;
 };
 
+class Protector {};
+
 /**
  * CommandChannel implements the sending/receiving commands with a specific device.
  */
 class CommandChannel : public IOLoop::IOLoopDelegate {
  public:
-  CommandChannel(apr_port_t port,
+  typedef std::chrono::steady_clock::time_point TimePoint;
+ 
+  CommandChannel(uint16_t port,
                  uint8_t handle,
                  const std::string &remote_ip,
-                 CommandChannelDelegate *cb,
-                 apr_pool_t *pool);
+                 CommandChannelDelegate *cb);
   virtual ~CommandChannel() { Uninit(); }
 
   /** Uninitialize CommandChannel. */
@@ -86,7 +89,7 @@ class CommandChannel : public IOLoop::IOLoopDelegate {
    * @param loop the IOLoop to bind.
    * @return true on successfully.
    */
-  bool Bind(IOLoop *loop);
+  bool Bind(std::weak_ptr<IOLoop> loop);
 
   /**
    * Send a command asynchronously.
@@ -94,32 +97,34 @@ class CommandChannel : public IOLoop::IOLoopDelegate {
    */
   void SendAsync(const Command &command);
 
-  void OnData(apr_socket_t *, void *);
-  void OnTimer(apr_time_t now);
+  void OnData(socket_t, void *);
+  void OnTimer(TimePoint now);
 
   static uint16_t GenerateSeq();
 
  private:
   void Send(const Command &cmd);
-  void HeartBeat(apr_time_t t);
+  void HeartBeat(TimePoint t);
   void SendInternal(const Command &command);
   Command DeepCopy(const Command &cmd);
   void OnHeartbeatAck(const CommPacket &packet);
   void DeviceDisconnect(uint8_t handle);
 
  private:
-  static const int kHeartbeatTimer = 800;
+  const std::chrono::milliseconds kHeartbeatTimer = std::chrono::milliseconds(800);
   uint8_t handle_;
-  apr_port_t port_;
-  apr_socket_t *sock_;
-  apr_pool_t *mem_pool_;
-  IOLoop *loop_;
+  uint16_t port_;
+  socket_t sock_ = -1;
+  std::weak_ptr<IOLoop> loop_;
   CommandChannelDelegate *callback_;
-  std::map<uint16_t, std::pair<Command, apr_time_t> > commands_;
+  std::map<uint16_t, std::pair<Command, TimePoint> > commands_;
   std::unique_ptr<CommPort> comm_port_;
-  apr_time_t heartbeat_time_;
   std::string remote_ip_;
-  apr_time_t last_heartbeat_;
+  TimePoint heartbeat_time_;
+  TimePoint last_heartbeat_;
+  using SharedProtecotr = std::shared_ptr<Protector>;
+  using WeakProtector = std::weak_ptr<Protector>;
+  SharedProtecotr protector_ = std::make_shared<Protector>();
 };
 
 }  // namespace livox

@@ -49,9 +49,9 @@ bool DataHandler::AddDevice(const DeviceInfo &info) {
   if (impl_ == NULL) {
     DeviceMode mode = static_cast<DeviceMode>(device_manager().device_mode());
     if (mode == kDeviceModeHub) {
-      impl_.reset(new HubDataHandlerImpl(this, mem_pool_));
+      impl_.reset(new HubDataHandlerImpl(this));
     } else if (mode == kDeviceModeLidar) {
-      impl_.reset(new LidarDataHandlerImpl(this, mem_pool_));
+      impl_.reset(new LidarDataHandlerImpl(this));
     }
 
     if (impl_ == NULL || !impl_->Init()) {
@@ -63,20 +63,12 @@ bool DataHandler::AddDevice(const DeviceInfo &info) {
 }
 
 bool DataHandler::Init() {
-  apr_status_t rv = apr_pool_create(&mem_pool_, NULL);
-  if (rv != APR_SUCCESS) {
-    return false;
-  }
   return true;
 }
 
 void DataHandler::Uninit() {
   if (impl_) {
     impl_.reset(NULL);
-  }
-  if (mem_pool_) {
-    apr_pool_destroy(mem_pool_);
-    mem_pool_ = NULL;
   }
 }
 
@@ -111,7 +103,13 @@ void DataHandler::OnDataCallback(uint8_t handle, void *data, uint16_t size) {
     case kImu:
       size = (size - kPrefixDataSize) / sizeof(LivoxImuPoint);
       break;
-    default: 
+    case kTripleExtendCartesian:
+      size = (size - kPrefixDataSize) / sizeof(LivoxTripleExtendRawPoint);
+      break;
+    case kTripleExtendSpherical:
+      size = (size - kPrefixDataSize) / sizeof(LivoxTripleExtendSpherPoint);
+      break;
+    default:
       return;
   }
   if (cb) {
